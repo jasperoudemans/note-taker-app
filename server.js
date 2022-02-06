@@ -1,10 +1,10 @@
 const express = require("express");
-const { readFile, fstat, appendFile } = require("fs");
+const { readFile, fstat, appendFile, writeFile } = require("fs");
 const path = require("path");
 
 const app = express();
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(express.static("public"));
 app.use(express.json());
@@ -17,7 +17,6 @@ app.get("/notes", (req, res) => {
   res.sendFile(path.join(__dirname, "public/notes.html"));
 });
 
-// The problem
 app.get("/api/notes", (req, res) => {
   readFile("db/db.json", (err, data) => {
     if (err) throw err;
@@ -27,12 +26,17 @@ app.get("/api/notes", (req, res) => {
 });
 
 app.post("/api/notes", (req, res) => {
-  console.log(req.body);
-  appendFile("./db/db.json", JSON.stringify(req.body), (err) => {
+  readFile("db/db.json", (err, data) => {
     if (err) throw err;
-    console.log("The data was appended to file!");
+    const currentNotes = JSON.parse(data);
+    const newNote = req.body;
+    newNote.id = Date.now();
+    currentNotes.push(req.body);
+    writeFile("db/db.json", JSON.stringify(currentNotes), (err) => {
+      if (err) throw err;
+    });
+    res.json(currentNotes);
   });
-  res.status(200).end();
 });
 
 app.get("*", (req, res) => {
